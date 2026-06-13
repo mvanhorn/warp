@@ -196,6 +196,15 @@ fn toolbelt_tooltip_keybinding(binding_names: &[&'static str], app: &AppContext)
 }
 
 impl LeftPanelView {
+    fn default_active_view(views: &[ToolPanelView]) -> ToolPanelView {
+        views
+            .iter()
+            .copied()
+            .find(|view| *view == ToolPanelView::ProjectExplorer)
+            .or_else(|| views.first().copied())
+            .unwrap_or(ToolPanelView::WarpDrive)
+    }
+
     pub fn new(
         working_directories_model: ModelHandle<WorkingDirectoriesModel>,
         views: Vec<ToolPanelView>,
@@ -236,7 +245,7 @@ impl LeftPanelView {
             }
         });
 
-        let active_view = views.first().copied().unwrap_or(ToolPanelView::WarpDrive);
+        let active_view = Self::default_active_view(&views);
         let toolbelt_buttons = views
             .iter()
             .map(|view| Self::create_toolbelt_button_config(view, ctx))
@@ -354,7 +363,7 @@ impl LeftPanelView {
     }
 
     /// Updates the available tool panel views.
-    /// If the currently active view is no longer available, switches to the first available view.
+    /// If the currently active view is no longer available, switches to the default view.
     pub fn update_available_views(
         &mut self,
         views: Vec<ToolPanelView>,
@@ -376,10 +385,10 @@ impl LeftPanelView {
             .map(|view| Self::create_toolbelt_button_config(view, ctx))
             .collect();
 
-        // If current view is no longer available, switch to the first available view
+        // If current view is no longer available, switch to the default view.
         if !is_current_view_available {
-            if let Some(first_view) = views.first().copied() {
-                active_view_state::set(self, first_view, ctx);
+            if !views.is_empty() {
+                active_view_state::set(self, Self::default_active_view(&views), ctx);
             }
         } else {
             self.update_button_active_states();
