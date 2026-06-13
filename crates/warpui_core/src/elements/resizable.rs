@@ -106,7 +106,7 @@ impl ResizableState {
     ) -> Option<Vector2F> {
         let mut resized = false;
 
-        if let Some(origin) = origin {
+        if origin.is_some() {
             let delta = match dragbar_side {
                 DragBarSide::Right => new_position.x() - old_position.x(),
                 DragBarSide::Left => old_position.x() - new_position.x(),
@@ -122,21 +122,7 @@ impl ResizableState {
             }
             let size = self.size;
 
-            // The last position should reflect the latest position of the dragbar.
-            let last_position = match dragbar_side {
-                // With a right-side dragbar, the latest position of the dragbar will
-                // be the old origin of the element plus the new width/height.
-                DragBarSide::Right => origin + vec2f(size, 0.),
-                // With a left-side dragbar, the latest position of the dragbar will
-                // be the old origin of the element minus the bounded delta of the drag.
-                DragBarSide::Left => origin - vec2f(size - old_size, 0.),
-                // With a bottom-side dragbar, the latest position of the dragbar will
-                // be the old origin of the element plus the new height.
-                DragBarSide::Bottom => origin + vec2f(0., size),
-                // With a top-side dragbar, the latest position of the dragbar will
-                // be the old origin of the element minus the bounded delta of the drag.
-                DragBarSide::Top => origin - vec2f(0., size - old_size),
-            };
+            let last_position = new_position;
 
             let origin_delta = match dragbar_side {
                 DragBarSide::Right => Vector2F::zero(),
@@ -495,5 +481,83 @@ impl Element for Resizable {
 fn dispatch_callback(callback: Option<&mut Handler>, ctx: &mut EventContext, app: &AppContext) {
     if let Some(callback) = callback {
         callback(ctx, app);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bounded_state(size: f32, min: f32, max: f32) -> ResizableState {
+        let mut state = ResizableState::new(size);
+        state.bounds = Some((min, max));
+        state
+    }
+
+    fn last_position(state: &ResizableState) -> Vector2F {
+        match &state.mode {
+            ResizableMode::Dragging { last_position } => *last_position,
+            ResizableMode::Stationary => panic!("expected state to be dragging"),
+        }
+    }
+
+    #[test]
+    fn resize_tracks_cursor_between_in_bounds_drags() {
+        let mut state = bounded_state(100., 50., 200.);
+
+        state.begin_resizing(vec2f(100., 0.));
+        assert_eq!(
+            state.check_for_resize(vec2f(115., 0.), Some(Vector2F::zero()), DragBarSide::Right),
+            Some(Vector2F::zero())
+        );
+        assert_eq!(state.size(), 115.);
+        assert_eq!(last_position(&state), vec2f(115., 0.));
+
+        assert_eq!(
+            state.check_for_resize(vec2f(125., 0.), Some(Vector2F::zero()), DragBarSide::Right),
+            Some(Vector2F::zero())
+        );
+        assert_eq!(state.size(), 125.);
+        assert_eq!(last_position(&state), vec2f(125., 0.));
+    }
+
+    #[test]
+    fn resize_past_max_clamp_reverses_from_cursor_position() {
+        let mut state = bounded_state(100., 50., 120.);
+
+        state.begin_resizing(vec2f(100., 0.));
+        assert_eq!(
+            state.check_for_resize(vec2f(150., 0.), Some(Vector2F::zero()), DragBarSide::Right),
+            Some(Vector2F::zero())
+        );
+        assert_eq!(state.size(), 120.);
+        assert_eq!(last_position(&state), vec2f(150., 0.));
+
+        assert_eq!(
+            state.check_for_resize(vec2f(140., 0.), Some(Vector2F::zero()), DragBarSide::Right),
+            Some(Vector2F::zero())
+        );
+        assert_eq!(state.size(), 110.);
+        assert_eq!(last_position(&state), vec2f(140., 0.));
+    }
+
+    #[test]
+    fn resize_past_min_clamp_reverses_from_cursor_position() {
+        let mut state = bounded_state(100., 80., 200.);
+
+        state.begin_resizing(vec2f(100., 0.));
+        assert_eq!(
+            state.check_for_resize(vec2f(50., 0.), Some(Vector2F::zero()), DragBarSide::Right),
+            Some(Vector2F::zero())
+        );
+        assert_eq!(state.size(), 80.);
+        assert_eq!(last_position(&state), vec2f(50., 0.));
+
+        assert_eq!(
+            state.check_for_resize(vec2f(60., 0.), Some(Vector2F::zero()), DragBarSide::Right),
+            Some(Vector2F::zero())
+        );
+        assert_eq!(state.size(), 90.);
+        assert_eq!(last_position(&state), vec2f(60., 0.));
     }
 }
