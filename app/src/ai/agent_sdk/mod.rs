@@ -1809,6 +1809,7 @@ fn command_to_telemetry_event(command: &CliCommand) -> CliTelemetryEvent {
         CliCommand::Provider(ProviderCommand::List) => CliTelemetryEvent::ProviderList,
         CliCommand::Integration(integration_cmd) => match integration_cmd {
             IntegrationCommand::Create(_) => CliTelemetryEvent::IntegrationCreate,
+            IntegrationCommand::Reconnect(_) => CliTelemetryEvent::IntegrationReconnect,
             IntegrationCommand::Update(_) => CliTelemetryEvent::IntegrationUpdate,
             IntegrationCommand::List => CliTelemetryEvent::IntegrationList,
         },

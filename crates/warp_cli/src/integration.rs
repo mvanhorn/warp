@@ -12,6 +12,8 @@ use crate::provider::ProviderType;
 pub enum IntegrationCommand {
     /// Create a new integration.
     Create(CreateIntegrationArgs),
+    /// Reconnect an existing integration to its provider.
+    Reconnect(ReconnectIntegrationArgs),
     /// Update an integration.
     Update(UpdateIntegrationArgs),
     /// List simple integrations and their connection status.
@@ -22,10 +24,18 @@ impl IntegrationCommand {
     pub(crate) fn as_str_for_tracing(&self) -> &'static str {
         match self {
             IntegrationCommand::Create(_) => "integration create",
+            IntegrationCommand::Reconnect(_) => "integration reconnect",
             IntegrationCommand::Update(_) => "integration update",
             IntegrationCommand::List => "integration list",
         }
     }
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct ReconnectIntegrationArgs {
+    /// Provider to reconnect the integration for.
+    #[arg(value_enum)]
+    pub provider: ProviderType,
 }
 
 #[derive(Debug, Clone, Args)]

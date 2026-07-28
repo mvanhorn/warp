@@ -1,6 +1,8 @@
 use futures::future;
 use warp_cli::GlobalOptions;
-use warp_cli::integration::{CreateIntegrationArgs, IntegrationCommand, UpdateIntegrationArgs};
+use warp_cli::integration::{
+    CreateIntegrationArgs, IntegrationCommand, ReconnectIntegrationArgs, UpdateIntegrationArgs,
+};
 use warp_cli::provider::ProviderType;
 use warp_graphql::mutations::create_simple_integration::CreateSimpleIntegrationOutput;
 use warp_graphql::queries::get_oauth_connect_tx_status::OauthConnectTxStatus;
@@ -23,6 +25,9 @@ pub fn run(
         IntegrationCommand::Create(args) => {
             runner.update(ctx, |runner, ctx| runner.create(args, ctx));
         }
+        IntegrationCommand::Reconnect(args) => {
+            runner.update(ctx, |runner, ctx| runner.reconnect(args, ctx));
+        }
         IntegrationCommand::Update(args) => {
             runner.update(ctx, |runner, ctx| runner.update(args, ctx));
         }
@@ -34,6 +39,38 @@ pub fn run(
 }
 
 struct IntegrationCommandRunner;
+
+fn reconnect_link(
+    output: anyhow::Result<SimpleIntegrationsOutput>,
+    provider: &ProviderType,
+) -> anyhow::Result<String> {
+    let provider_slug = provider.slug();
+    let output = output.map_err(|err| {
+        anyhow::anyhow!(
+            "Cannot reconnect {}: failed to fetch integration details: {err}",
+            provider.name()
+        )
+    })?;
+    let integration = output
+        .integrations
+        .into_iter()
+        .find(|integration| integration.provider_slug == provider_slug)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Cannot reconnect {}: the integration was not returned by the server.",
+                provider.name()
+            )
+        })?;
+
+    if integration.connection_link.trim().is_empty() {
+        return Err(anyhow::anyhow!(
+            "Cannot reconnect {}: the server returned an empty authorization link.",
+            provider.name()
+        ));
+    }
+
+    Ok(integration.connection_link)
+}
 
 impl IntegrationCommandRunner {
     fn list(&self, global_options: GlobalOptions, ctx: &mut ModelContext<Self>) {
@@ -189,6 +226,37 @@ impl IntegrationCommandRunner {
                 1,
             );
         });
+    }
+
+    fn reconnect(&self, args: ReconnectIntegrationArgs, ctx: &mut ModelContext<Self>) {
+        let integrations_client = ServerApiProvider::as_ref(ctx).get_integrations_client();
+        let provider_slug = args.provider.slug();
+
+        let reconnect_future = async move {
+            integrations_client
+                .list_simple_integrations(vec![provider_slug])
+                .await
+        };
+
+        ctx.spawn(
+            reconnect_future,
+            move |_, result: anyhow::Result<SimpleIntegrationsOutput>, ctx| match reconnect_link(
+                result,
+                &args.provider,
+            ) {
+                Ok(connection_link) => {
+                    println!(
+                        "Authorize {} here: {connection_link}\n",
+                        args.provider.name()
+                    );
+                    ctx.open_url(&connection_link);
+                    ctx.terminate_app(TerminationMode::ForceTerminate, None);
+                }
+                Err(err) => {
+                    ctx.terminate_app(TerminationMode::ForceTerminate, Some(Err(err)));
+                }
+            },
+        );
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -527,3 +595,7 @@ impl warpui::Entity for IntegrationCommandRunner {
     type Event = ();
 }
 impl SingletonEntity for IntegrationCommandRunner {}
+
+#[cfg(test)]
+#[path = "integration_tests.rs"]
+mod tests;

@@ -1492,6 +1492,25 @@ fn integration_create_accepts_model() {
 }
 
 #[test]
+fn integration_reconnect_accepts_provider() {
+    let args = Args::try_parse_from(["warp", "integration", "reconnect", "linear"]).unwrap();
+
+    let Some(Command::CommandLine(boxed_cmd)) = args.command else {
+        panic!("Expected `warp integration reconnect` command");
+    };
+    let CliCommand::Integration(command @ IntegrationCommand::Reconnect(args)) = boxed_cmd.as_ref()
+    else {
+        panic!("Expected `warp integration reconnect` command");
+    };
+
+    assert!(matches!(
+        &args.provider,
+        crate::provider::ProviderType::Linear
+    ));
+    assert_eq!(command.as_str_for_tracing(), "integration reconnect");
+}
+
+#[test]
 fn integration_update_accepts_file() {
     let args = Args::try_parse_from([
         "warp",

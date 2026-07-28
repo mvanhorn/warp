@@ -32,6 +32,7 @@ pub struct SimpleIntegrationsOutput {
 pub struct SimpleIntegration {
     pub provider_slug: String,
     pub description: String,
+    pub connection_link: String,
     pub connection_status: SimpleIntegrationConnectionStatus,
     pub integration_config: Option<ListedSimpleIntegrationConfig>,
     pub created_at: Option<Time>,

@@ -97,6 +97,8 @@ pub(super) enum CliTelemetryEvent {
     ProviderList,
     /// Executing `warp integration create`
     IntegrationCreate,
+    /// Executing `warp integration reconnect`
+    IntegrationReconnect,
     /// Executing `warp integration update`
     IntegrationUpdate,
     /// Executing `warp integration list`
@@ -221,6 +223,7 @@ impl TelemetryEvent for CliTelemetryEvent {
             CliTelemetryEvent::ProviderSetup => None,
             CliTelemetryEvent::ProviderList => None,
             CliTelemetryEvent::IntegrationCreate => None,
+            CliTelemetryEvent::IntegrationReconnect => None,
             CliTelemetryEvent::IntegrationUpdate => None,
             CliTelemetryEvent::IntegrationList => None,
             CliTelemetryEvent::ArtifactUpload => None,
@@ -341,6 +344,9 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
             CliTelemetryEventDiscriminants::ProviderSetup => "CLI.Execute.Provider.Setup",
             CliTelemetryEventDiscriminants::ProviderList => "CLI.Execute.Provider.List",
             CliTelemetryEventDiscriminants::IntegrationCreate => "CLI.Execute.Integration.Create",
+            CliTelemetryEventDiscriminants::IntegrationReconnect => {
+                "CLI.Execute.Integration.Reconnect"
+            }
             CliTelemetryEventDiscriminants::IntegrationUpdate => "CLI.Execute.Integration.Update",
             CliTelemetryEventDiscriminants::IntegrationList => "CLI.Execute.Integration.List",
             CliTelemetryEventDiscriminants::ArtifactUpload => "CLI.Execute.Artifact.Upload",
@@ -476,6 +482,9 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
             CliTelemetryEventDiscriminants::ProviderList => "Listed providers from the Warp CLI",
             CliTelemetryEventDiscriminants::IntegrationCreate => {
                 "Created an integration from the Warp CLI"
+            }
+            CliTelemetryEventDiscriminants::IntegrationReconnect => {
+                "Reconnected an integration from the Warp CLI"
             }
             CliTelemetryEventDiscriminants::IntegrationUpdate => {
                 "Updated an integration from the Warp CLI"

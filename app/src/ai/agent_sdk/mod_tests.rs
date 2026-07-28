@@ -4,6 +4,8 @@ use warp_cli::agent::Harness;
 use warp_cli::artifact::{
     ArtifactCommand, DownloadArtifactArgs, GetArtifactArgs, UploadArtifactArgs,
 };
+use warp_cli::integration::{IntegrationCommand, ReconnectIntegrationArgs};
+use warp_cli::provider::ProviderType;
 use warp_cli::task::{MessageCommand, MessageSendArgs, MessageWatchArgs, TaskCommand};
 use warp_core::telemetry::TelemetryEvent;
 
@@ -19,6 +21,17 @@ fn logout_does_not_require_auth() {
 #[test]
 fn login_does_not_require_auth() {
     assert!(!command_requires_auth(&CliCommand::Login));
+}
+
+#[test]
+fn integration_reconnect_has_distinct_telemetry() {
+    let event = command_to_telemetry_event(&CliCommand::Integration(
+        IntegrationCommand::Reconnect(ReconnectIntegrationArgs {
+            provider: ProviderType::Linear,
+        }),
+    ));
+
+    assert_eq!(event.name(), "CLI.Execute.Integration.Reconnect");
 }
 
 #[test]
